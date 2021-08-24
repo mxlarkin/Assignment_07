@@ -33,8 +33,12 @@ class DataProcessor:
         Returns:
             table (list of Dics): Table with added CD
         '''
+       
         dicRow = {'ID': cdID, 'Title': title, 'Artist': artist}
-        table.append(dicRow)
+        if table[0]['ID'] == None:
+            table = [dicRow]
+        else: 
+            table.append(dicRow)
         return table
         
     @staticmethod
@@ -49,12 +53,19 @@ class DataProcessor:
         '''
         intRowNr = -1
         blnCDRemoved = False
-        for row in table:
-            intRowNr += 1
-            if int(row['ID']) == cdID:
-                del table[intRowNr]
-                blnCDRemoved = True
-                break
+        if table[0]['ID'] == None:
+            blnCDRemoved = False
+        else: 
+            
+            for row in table:
+                intRowNr += 1
+                if int(row['ID']) == cdID:
+                    if len(table) == 1:
+                        data = {'ID': None, 'Title': None, 'Artist': None}
+                        table.append(data)
+                    del table[intRowNr]
+                    blnCDRemoved = True
+                    break
         return blnCDRemoved, table
     
     @staticmethod
@@ -64,8 +75,10 @@ class DataProcessor:
             table (list of dictionaries): List of CDs to be sorted
         Returns:
             sorted_table (list of dictionaries): sorted list of CDs'''
-            
-        sorted_table = sorted(table, key = lambda i: i['ID'])
+        if table[0]['ID'] == None:
+            sorted_table = table 
+        else:
+            sorted_table = sorted(table, key = lambda i: i['ID'])
         return sorted_table
     
     @staticmethod
@@ -77,21 +90,25 @@ class DataProcessor:
         Returns:
             cdID (integer): returns CD ID once it is unique
         '''
-        boolean = True
-        while boolean:
-            for i in range(len(table)):
-                j = table[i]['ID']
-                if j == cdID:
-                    boolean2 = True
-                    while boolean2:
-                        try:
-                            cdID = int(input('CD ID ' + str(cdID) + ' already exists, input a unique CD number: '))
-                            boolean2 = False
-                        except ValueError as e:
-                            print('The following error was encountered:', e)
-                            print('The CD ID must be a number.')
-                elif i == len(table) - 1:
-                    boolean = False
+        print(table[0]['ID'])
+        if table[0]['ID'] == None:
+            print('There are no CDs to compare.')
+        else:
+            boolean = True
+            while boolean:
+                for i in range(len(table)):
+                    j = table[i]['ID']
+                    if j == cdID:
+                        boolean2 = True
+                        while boolean2:
+                            try:
+                                cdID = int(input('CD ID ' + str(cdID) + ' already exists, input a unique CD ID: '))
+                                boolean2 = False
+                            except ValueError as e:
+                                print('The following error was encountered:', e)
+                                print('The CD ID must be a number.')
+                    elif i == len(table) - 1:
+                        boolean = False
         return cdID
 
 class FileProcessor:
@@ -116,8 +133,11 @@ class FileProcessor:
                 dataTbl = pickle.load(file)
         except FileNotFoundError as e:
             print('The following error was encountered:', e)
-            with open(file_name, 'xb') as file:
+            with open(file_name, 'wb') as file:
                 print(file_name, 'has been created!')
+                data = [{'ID': None, 'Title': None, 'Artist': None}]
+                pickle.dump(data, file)
+                dataTbl = data
         return dataTbl
 
     @staticmethod
@@ -187,8 +207,11 @@ class IO:
         """
         print('\n======= The Current Inventory: =======')
         print('ID\tCD Title (by: Artist)\n')
-        for row in table:
-            print('{}\t{} (by: {})'.format(*row.values()))
+        if table[0]['ID'] == None:
+             print()
+        else: 
+            for row in table:
+                print('{}\t{} (by: {})'.format(*row.values()))
         print('======================================\n')
 
     # TODone add I/O functions as needed
@@ -215,21 +238,25 @@ class IO:
         return cdID, title, artist
     
     @staticmethod
-    def input_ID():
+    def input_ID(table):
         '''Function to get CD ID for deleted CD
         Args:
-            None
+            table (list of dics): to test if inital value is None
         Returns:
             intIDDel (integer): number of ID to delete
         '''
-        boolean = True
-        while boolean:
-            try:
-                intIDDel = int(input('Which ID would you like to delete? ').strip())
-                boolean = False
-            except ValueError as e:
-                print('The following error was encountered:', e)
-                print('The CD ID must be a number.')
+        if table[0]['ID'] == None:
+            print('There are no CDs to remove.\n')
+            intIDDel = 0
+        else: 
+            boolean = True
+            while boolean:
+                try:
+                    intIDDel = int(input('Which ID would you like to delete? ').strip())
+                    boolean = False
+                except ValueError as e:
+                    print('The following error was encountered:', e)
+                    print('The CD ID must be a number.')
         return intIDDel
     
     @staticmethod
@@ -257,10 +284,10 @@ while True:
 
     # 3. Process menu selection
     # 3.1 process exit first
-    if strChoice == 'x':
+    if strChoice.lower() == 'x':
         break
     # 3.2 process load inventory
-    if strChoice == 'l':
+    if strChoice.lower() == 'l':
         print('WARNING: If you continue, all unsaved data will be lost and the Inventory re-loaded from file.')
         strYesNo = input('Type \'y\' to continue and reload from file; otherwise reload will be cancelled:\n')
         if strYesNo.lower() == 'y':
@@ -272,7 +299,7 @@ while True:
             IO.show_inventory(dicTbl)
         continue  # start loop back at top.
     # 3.3 process add a CD
-    elif strChoice == 'a':
+    elif strChoice.lower() == 'a':
         # 3.3.1 Ask user for new ID, CD Title and Artist
         # TODone move IO code into function
         strID, strTitle, strArtist = IO.input_CD()
@@ -281,27 +308,28 @@ while True:
         # 3.3.2 Add item to the table
         # TODone move processing code into function
         dicTbl = DataProcessor.add_CD(strID, strTitle, strArtist, dicTbl)
-        
+        # Sorts CD inventory 
         dicTbl = DataProcessor.sort_CD(dicTbl)
         IO.show_inventory(dicTbl)
         print('You must save the file to keep this change.')
         continue  # start loop back at top.
     # 3.4 process display current inventory
-    elif strChoice == 'i':
+    elif strChoice.lower() == 'i':
         IO.show_inventory(dicTbl)
         continue  # start loop back at top.
     # 3.5 process delete a CD
-    elif strChoice == 'd':
+    elif strChoice.lower() == 'd':
         # 3.5.1 get Userinput for which CD to delete
         # 3.5.1.1 display Inventory to user
         IO.show_inventory(dicTbl)
         # 3.5.1.2 ask user which ID to remove
-        intIDDel = IO.input_ID()
+        intIDDel = IO.input_ID(dicTbl)
         # 3.5.2 search thru table and delete CD
         # TODone move processing code into function
         blnCDRmvd, dicTbl = DataProcessor.delete_CD(intIDDel, dicTbl)
         # Tell user if CD was able to be removed or not
-        IO.cd_status(blnCDRmvd)
+        if dicTbl[0]['ID'] != None:
+            IO.cd_status(blnCDRmvd)
         if blnCDRmvd:
             dicTbl = DataProcessor.sort_CD(dicTbl)
         # Show the inventory with the CD removed
@@ -309,12 +337,12 @@ while True:
             print('You must save the file to keep this change.')
         continue  # start loop back at top.
     # 3.6 process save inventory to file
-    elif strChoice == 's':
+    elif strChoice.lower() == 's':
         # 3.6.1 Display current inventory and ask user for confirmation to save
         IO.show_inventory(dicTbl)
         strYesNo = input('Type \'y\' to save data to file; otherwise save will be cancelled:\n').strip().lower()
         # 3.6.2 Process choice
-        if strYesNo == 'y':
+        if strYesNo.lower() == 'y':
             # 3.6.2.1 save data
             # TODone move processing code into function
             FileProcessor.write_file(strFileName, dicTbl)
